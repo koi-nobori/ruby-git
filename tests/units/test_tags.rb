@@ -11,6 +11,10 @@ class TestTags < Test::Unit::TestCase
     in_temp_dir do |path|
       r1 = Git.clone(@wbare, 'repo1')
       r2 = Git.clone(@wbare, 'repo2')
+      r1.config('user.name', 'Test User')
+      r1.config('user.email', 'test@email.com')
+      r2.config('user.name', 'Test User')
+      r2.config('user.email', 'test@email.com')
         
       assert_raise Git::GitTagNameDoesNotExist do
         r1.tag('first')
@@ -54,6 +58,19 @@ class TestTags < Test::Unit::TestCase
       assert_raise Git::GitTagNameDoesNotExist do
         r2.tag('third')
       end
+
+      tag1 = r2.tag('fourth')
+      assert_true(tag1.annotated?)
+      assert_equal(tag1.tagger.class, Git::Author)
+      assert_equal(tag1.tagger.name, 'Test User')
+      assert_equal(tag1.tagger.email, 'test@email.com')
+      assert_true((Time.now - tag1.tagger.date) <  10)
+      assert_equal(tag1.message, ' test message')
+      
+      tag2 = r2.tag('fifth')
+      assert_false(tag2.annotated?)
+      assert_equal(tag2.tagger, nil)
+      assert_equal(tag2.message, nil)
     end
   end
 end

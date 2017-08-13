@@ -217,9 +217,7 @@ module Git
       end
       
       def set_commit(data)
-        if data['sha']
-          @sha = data['sha']
-        end
+        @sha ||= data['sha']
         @committer = Git::Author.new(data['committer'])
         @author = Git::Author.new(data['author'])
         @tree = Git::Object::Tree.new(@base, data['tree'])
@@ -235,10 +233,10 @@ module Git
   
         # see if this object has been initialized and do so if not
         def check_commit
-          unless @tree
-            data = @base.lib.commit_data(@objectish)
-            set_commit(data)
-          end
+          return if @tree
+          
+          data = @base.lib.commit_data(@objectish)
+          set_commit(data)
         end
       
     end
@@ -249,10 +247,42 @@ module Git
       def initialize(base, sha, name)
         super(base, sha)
         @name = name
+        @annotated = nil
+        @loaded = false
       end
 
+      def annotated?
+        @annotated ||= (@base.lib.object_type(self.name) == 'tag')
+      end
+
+      def message
+        check_tag()
+        return @message
+      end
+      
       def tag?
         true
+      end
+
+      def tagger
+        check_tag()
+        return @tagger
+      end
+
+      private
+
+      def check_tag
+        return if @loaded
+
+        if !self.annotated? 
+          @message = @tagger = nil
+        else
+          tdata = @base.lib.tag_data(@name)
+          @message = tdata['message'].chomp
+          @tagger = Git::Author.new(tdata['tagger'])
+        end
+
+        @loaded = true
       end
         
     end
